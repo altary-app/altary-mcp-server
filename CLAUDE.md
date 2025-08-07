@@ -57,13 +57,13 @@ Authentication uses custom `X-Claude-Token` header with validation through proje
 
 ### MCP Tools Available
 
-1. `get_user_projects` - List user projects
-2. `get_errors` - Fetch project errors with AI analysis  
-3. `complete_error` - Complete error with similar error detection
-4. `setup_auth` - Handle authentication (browser or token)
-5. `set_default_project` - Set default project ID
-6. `show_config` - Display current configuration
-7. `clear_config` - Reset all configuration
+1. `altary_projects` - プロジェクト一覧取得
+2. `altary_errors` - エラー一覧取得（AI分析付き）
+3. `altary_complete` - エラー完了処理（類似エラー自動完了）
+4. `altary_auth` - 認証設定
+5. `altary_set_project` - デフォルトプロジェクト設定
+6. `altary_config` - 設定表示
+7. `altary_clear` - 設定クリア
 
 ## Installation Methods
 

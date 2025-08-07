@@ -30,7 +30,7 @@ async def list_tools() -> list[types.Tool]:
     """
     return [
         types.Tool(
-            name="get_user_projects",
+            name="altary_projects",
             description="ユーザーのプロジェクト一覧を取得します",
             inputSchema={
                 "type": "object",
@@ -39,7 +39,7 @@ async def list_tools() -> list[types.Tool]:
             }
         ),
         types.Tool(
-            name="get_errors",
+            name="altary_errors",
             description="指定されたプロジェクトのエラー一覧を取得します",
             inputSchema={
                 "type": "object", 
@@ -53,7 +53,7 @@ async def list_tools() -> list[types.Tool]:
             }
         ),
         types.Tool(
-            name="complete_error",
+            name="altary_complete",
             description="エラーを完了状態にします（AI類似性検出で関連エラーも自動完了）",
             inputSchema={
                 "type": "object",
@@ -67,7 +67,7 @@ async def list_tools() -> list[types.Tool]:
             }
         ),
         types.Tool(
-            name="setup_auth",
+            name="altary_auth",
             description="Altary認証の初期設定を行います",
             inputSchema={
                 "type": "object",
@@ -81,7 +81,7 @@ async def list_tools() -> list[types.Tool]:
             }
         ),
         types.Tool(
-            name="set_default_project", 
+            name="altary_set_project", 
             description="デフォルトプロジェクトを設定します",
             inputSchema={
                 "type": "object",
@@ -95,7 +95,7 @@ async def list_tools() -> list[types.Tool]:
             }
         ),
         types.Tool(
-            name="show_config",
+            name="altary_config",
             description="現在の設定を表示します",
             inputSchema={
                 "type": "object",
@@ -104,7 +104,7 @@ async def list_tools() -> list[types.Tool]:
             }
         ),
         types.Tool(
-            name="clear_config",
+            name="altary_clear",
             description="設定をクリアします", 
             inputSchema={
                 "type": "object",
@@ -121,29 +121,29 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> list[types.TextCont
     ツール実行のメインハンドラー
     """
     try:
-        if name == "get_user_projects":
+        if name == "altary_projects":
             return await handle_get_user_projects()
         
-        elif name == "get_errors":
+        elif name == "altary_errors":
             project_id = arguments.get("project_id")
             return await handle_get_errors(project_id)
         
-        elif name == "complete_error":
+        elif name == "altary_complete":
             error_id = arguments["error_id"]
             return await handle_complete_error(error_id)
         
-        elif name == "setup_auth":
+        elif name == "altary_auth":
             token = arguments.get("token")
             return await handle_setup_auth(token)
         
-        elif name == "set_default_project":
+        elif name == "altary_set_project":
             project_id = arguments["project_id"]
             return await handle_set_default_project(project_id)
         
-        elif name == "show_config":
+        elif name == "altary_config":
             return await handle_show_config()
         
-        elif name == "clear_config":
+        elif name == "altary_clear":
             return await handle_clear_config()
         
         else:

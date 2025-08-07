@@ -49,46 +49,46 @@ pip install -e .
 
 ```bash
 # ブラウザで認証ページを開く
-mcp__altary__setup_auth
+altary_auth
 
 # トークン取得後、設定
-mcp__altary__setup_auth(token="your-auth-token")
+altary_auth(token="your-auth-token")
 ```
 
 ### 2. プロジェクト選択
 
 ```bash
 # プロジェクト一覧を取得
-mcp__altary__get_user_projects
+altary_projects
 
 # デフォルトプロジェクトを設定
-mcp__altary__set_default_project(project_id="ALTR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+altary_set_project(project_id="ALTR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
 ```
 
 ### 3. エラー管理
 
 ```bash
 # エラー一覧を表示（A、B、C選択形式）
-mcp__altary__get_errors
+altary_errors
 
 # 特定プロジェクトのエラー取得
-mcp__altary__get_errors(project_id="ALTR-specific-project-id")
+altary_errors(project_id="ALTR-specific-project-id")
 
 # エラー完了（類似エラーも自動完了）
-mcp__altary__complete_error(error_id="error-rand-id")
+altary_complete(error_id="error-rand-id")
 ```
 
 ## 利用可能なツール
 
 | ツール名 | 説明 | パラメータ |
 |---------|------|-----------|
-| `get_user_projects` | プロジェクト一覧取得 | なし |
-| `get_errors` | エラー一覧取得 | `project_id` (省略可) |
-| `complete_error` | エラー完了処理 | `error_id` (必須) |
-| `setup_auth` | 認証設定 | `token` (省略可) |
-| `set_default_project` | デフォルトプロジェクト設定 | `project_id` (必須) |
-| `show_config` | 現在の設定表示 | なし |
-| `clear_config` | 設定クリア | なし |
+| `altary_projects` | プロジェクト一覧取得 | なし |
+| `altary_errors` | エラー一覧取得 | `project_id` (省略可) |
+| `altary_complete` | エラー完了処理 | `error_id` (必須) |
+| `altary_auth` | 認証設定 | `token` (省略可) |
+| `altary_set_project` | デフォルトプロジェクト設定 | `project_id` (必須) |
+| `altary_config` | 現在の設定表示 | なし |
+| `altary_clear` | 設定クリア | なし |
 
 ## 使用例
 
@@ -96,19 +96,19 @@ mcp__altary__complete_error(error_id="error-rand-id")
 
 ```python
 # 1. 設定確認
-await mcp__altary__show_config()
+await altary_config()
 
 # 2. 認証（初回のみ）
-await mcp__altary__setup_auth()
+await altary_auth()
 
 # 3. プロジェクト設定（初回のみ）  
-projects = await mcp__altary__get_user_projects()
-await mcp__altary__set_default_project(project_id="ALTR-...")
+projects = await altary_projects()
+await altary_set_project(project_id="ALTR-...")
 
 # 4. エラー確認・修正
-errors = await mcp__altary__get_errors()
+errors = await altary_errors()
 # コード修正...
-await mcp__altary__complete_error(error_id="target-error-id")
+await altary_complete(error_id="target-error-id")
 ```
 
 ### ChatGPT分析付きエラー表示
@@ -142,8 +142,8 @@ A. UsersController.php:978
 
 ```bash
 # トークンの再設定
-mcp__altary__clear_config
-mcp__altary__setup_auth
+altary_clear
+altary_auth
 ```
 
 ### ネットワークエラー
