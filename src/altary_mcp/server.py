@@ -227,6 +227,12 @@ async def handle_get_errors(project_id: Optional[str] = None) -> list[types.Text
             project_list += "利用可能なプロジェクト:\n\n"
             
             for i, project in enumerate(projects, 1):
+                # projectが辞書でない場合の対応
+                if not isinstance(project, dict):
+                    project_list += f"{i}. **データ形式エラー** (型: {type(project)})\n"
+                    project_list += f"   値: {str(project)[:50]}...\n\n"
+                    continue
+                    
                 project_name = project.get('name', '無名プロジェクト')
                 project_id_val = project.get('report_rand', project.get('id', ''))
                 project_list += f"{i}. **{project_name}**\n"

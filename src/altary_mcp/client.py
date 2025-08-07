@@ -32,16 +32,46 @@ class AltaryClient:
         try:
             response = await self.client.get(url, headers=headers)
             response.raise_for_status()
-            return response.json()
+            
+            # レスポンス内容をデバッグ
+            response_data = response.json()
+            
+            # レスポンスがリスト形式でない場合の対応
+            if isinstance(response_data, dict):
+                # {"projects": [...]} のような形式の場合
+                if "projects" in response_data:
+                    return response_data["projects"]
+                # エラーレスポンスの場合
+                elif "error" in response_data or "message" in response_data:
+                    error_msg = response_data.get("message", response_data.get("error", "不明なエラー"))
+                    raise Exception(f"APIエラー: {error_msg}")
+                # 単一オブジェクトの場合はリストに包む
+                else:
+                    return [response_data]
+            elif isinstance(response_data, list):
+                return response_data
+            else:
+                raise Exception(f"予期しないレスポンス形式: {type(response_data)}")
+                
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
                 raise Exception("認証に失敗しました。トークンを確認してください。")
             elif e.response.status_code == 403:
                 raise Exception("アクセス権限がありません。")
             else:
-                raise Exception(f"プロジェクト取得に失敗しました: {e.response.status_code}")
+                try:
+                    error_detail = e.response.json()
+                    error_msg = error_detail.get("message", f"HTTP {e.response.status_code}")
+                except:
+                    error_msg = f"HTTP {e.response.status_code}"
+                raise Exception(f"プロジェクト取得に失敗しました: {error_msg}")
         except httpx.RequestError as e:
             raise Exception(f"ネットワークエラー: {e}")
+        except Exception as e:
+            if "認証に失敗" in str(e) or "アクセス権限" in str(e) or "プロジェクト取得に失敗" in str(e) or "ネットワークエラー" in str(e) or "APIエラー" in str(e):
+                raise e
+            else:
+                raise Exception(f"データ処理エラー: {str(e)}")
     
     async def get_errors(self, project_id: Optional[str] = None) -> Dict[str, Any]:
         """
