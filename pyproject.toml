@@ -1,0 +1,30 @@
+[project]
+name = "altary-mcp-server"
+version = "1.0.0"
+description = "Altary Error Management MCP Server for Claude Code"
+authors = [
+    {name = "Altary Team", email = "support@altary.dev"}
+]
+dependencies = [
+    "mcp>=0.9.0",
+    "httpx>=0.25.0",
+]
+requires-python = ">=3.9"
+
+[project.urls]
+Homepage = "https://altary.web-ts.dev"
+Repository = "https://github.com/altary-app/altary-mcp-server"
+Documentation = "https://altary.web-ts.dev/document"
+
+[project.scripts]
+altary-mcp-server = "altary_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
