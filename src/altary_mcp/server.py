@@ -148,6 +148,15 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {},
                 "required": []
             }
+        ),
+        types.Tool(
+            name="altary_success",
+            description="認証成功通知（内部使用）",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
         )
     ]
 
@@ -182,6 +191,15 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> list[types.TextCont
         
         elif name == "altary_clear":
             return await handle_clear_config()
+        
+        elif name == "altary_success":
+            return [types.TextContent(
+                type="text",
+                text="🎉 **Altary認証に成功しました！**\n\n"
+                     "✅ 認証トークンが正常に設定されました\n"
+                     "📋 ブラウザのタブを手動で閉じてください\n\n"
+                     "これで `altary_errors` でエラー一覧を取得できます！"
+            )]
         
         else:
             return [types.TextContent(
@@ -245,6 +263,8 @@ async def handle_get_errors(project_id: Optional[str] = None) -> list[types.Text
             is_valid = await client.validate_token(auto_token)
             if is_valid:
                 config.auth_token = auto_token
+                print("\n🎉 ** Altary認証に成功しました！** 🎉")
+                print("✅ ブラウザのタブを手動で閉じてください\n")
                 # 認証成功後、プロジェクト設定チェックに進む
                 pass
             else:
@@ -444,12 +464,14 @@ async def handle_setup_auth(token: Optional[str] = None) -> list[types.TextConte
             is_valid = await client.validate_token(auto_token)
             if is_valid:
                 config.auth_token = auto_token
-                return [types.TextContent(
-                    type="text",
-                    text="🎉 **自動認証が完了しました！**\n\n"
-                         "✅ 認証トークンが正常に設定されました。\n"
-                         "次に `altary_errors` を実行してプロジェクト設定を完了してください。"
-                )]
+                
+                # ブラウザタブクローズの案内も含める
+                success_message = "🎉 **Altary認証に成功しました！**\n\n"
+                success_message += "✅ 認証トークンが正常に設定されました\n"
+                success_message += "📋 ブラウザのタブを手動で閉じてください\n\n"
+                success_message += "次に `altary_errors` を実行してプロジェクト設定を完了してください。"
+                
+                return [types.TextContent(type="text", text=success_message)]
             else:
                 return [types.TextContent(
                     type="text",
