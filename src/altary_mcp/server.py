@@ -22,6 +22,40 @@ client = AltaryClient(config)
 # Create the server instance
 server = Server("altary-mcp")
 
+# サーバー初期化時にログイン状態をチェック
+async def check_login_status_on_startup():
+    """サーバー起動時にログイン状態をチェックし、必要に応じてログイン画面を表示"""
+    try:
+        if not config.auth_token:
+            print("🔐 Altaryにログインが必要です。認証を開始します...")
+            # 自動認証を試行
+            auto_token = await client.start_callback_auth()
+            
+            # 取得したトークンを検証
+            is_valid = await client.validate_token(auto_token)
+            if is_valid:
+                config.auth_token = auto_token
+                print("✅ 自動認証が完了しました！")
+                
+                # プロジェクトが未設定の場合はプロジェクト選択案内
+                if not config.project_id:
+                    print("📋 デフォルトプロジェクトを設定してください。")
+                    print("Claude Codeで `altary_projects` を実行してプロジェクトを選択してください。")
+                else:
+                    print(f"🎉 設定完了！プロジェクト: {config.project_id}")
+            else:
+                print("❌ 自動認証に失敗しました。Claude Codeで `altary_auth` を実行してください。")
+        else:
+            print("✅ Altaryに認証済みです。")
+            if config.project_id:
+                print(f"📋 デフォルトプロジェクト: {config.project_id}")
+            else:
+                print("📋 プロジェクト未設定。`altary_projects` でプロジェクトを選択してください。")
+                
+    except Exception as e:
+        print(f"⚠️ ログイン状態チェック中にエラー: {str(e)}")
+        print("Claude Codeで `altary_auth` を実行してください。")
+
 
 @server.list_tools()
 async def list_tools() -> list[types.Tool]:
@@ -521,6 +555,9 @@ def main():
     try:
         # サーバーを実行
         async def run_server():
+            # 起動時にログイン状態をチェック
+            await check_login_status_on_startup()
+            
             async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
                 await server.run(
                     read_stream,
