@@ -263,10 +263,18 @@ async def handle_get_errors(project_id: Optional[str] = None) -> list[types.Text
             is_valid = await client.validate_token(auto_token)
             if is_valid:
                 config.auth_token = auto_token
+                
+                # 認証成功メッセージを表示してからプロジェクト設定チェックに進む
                 print("\n🎉 ** Altary認証に成功しました！** 🎉")
                 print("✅ ブラウザのタブを手動で閉じてください\n")
-                # 認証成功後、プロジェクト設定チェックに進む
-                pass
+                
+                # 認証成功のメッセージを即座に返す
+                return [types.TextContent(
+                    type="text",
+                    text="🎉 **Altary認証に成功しました！**\n\n"
+                         "✅ ブラウザのタブを手動で閉じてください\n\n"
+                         "再度 `altary_errors` を実行してプロジェクト設定を完了してください。"
+                )]
             else:
                 return [types.TextContent(
                     type="text",
@@ -465,13 +473,8 @@ async def handle_setup_auth(token: Optional[str] = None) -> list[types.TextConte
             if is_valid:
                 config.auth_token = auto_token
                 
-                # ブラウザタブクローズの案内も含める
-                success_message = "🎉 **Altary認証に成功しました！**\n\n"
-                success_message += "✅ 認証トークンが正常に設定されました\n"
-                success_message += "📋 ブラウザのタブを手動で閉じてください\n\n"
-                success_message += "次に `altary_errors` を実行してプロジェクト設定を完了してください。"
-                
-                return [types.TextContent(type="text", text=success_message)]
+                # 認証成功後、設定状況を表示（成功メッセージ込み）
+                return await handle_show_config_with_success()
             else:
                 return [types.TextContent(
                     type="text",
@@ -560,6 +563,22 @@ async def handle_show_config() -> list[types.TextContent]:
         config_info += "⚠️ **設定不完全** - `altary_errors` を実行して設定を完了してください"
     
     return [types.TextContent(type="text", text=config_info)]
+
+async def handle_show_config_with_success() -> list[types.TextContent]:
+    """認証成功メッセージ付き設定表示"""
+    success_msg = "🎉 **Altary認証に成功しました！** 🎉\n\n"
+    success_msg += "✅ 認証トークンが正常に設定されました\n"
+    success_msg += "📋 ブラウザのタブを手動で閉じてください\n\n"
+    success_msg += "---\n\n"
+    
+    # 通常の設定表示を取得
+    config_result = await handle_show_config()
+    config_text = config_result[0].text
+    
+    # 成功メッセージと結合
+    combined_text = success_msg + config_text
+    
+    return [types.TextContent(type="text", text=combined_text)]
 
 
 async def handle_clear_config() -> list[types.TextContent]:
