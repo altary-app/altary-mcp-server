@@ -287,13 +287,18 @@ async def handle_get_errors(project_id: Optional[str] = None) -> list[types.Text
                 text="✅ 現在エラーはありません。"
             )]
         
-        # エラー一覧を整形（アルファベット選択形式）
-        error_list = f"🐛 **エラー一覧** (合計: {len(errors)}件)\n\n"
+        # エラー一覧を短いメッセージに分割して表示（折りたたみ防止）
+        result_messages = []
         
-        for i, error in enumerate(errors[:26]):  # A-Z最大26件
+        # ヘッダーメッセージ
+        header = f"🐛 **エラー一覧** (合計: {len(errors)}件)\n"
+        result_messages.append(types.TextContent(type="text", text=header))
+        
+        # エラーを1つずつ分割表示（最大10件まで）
+        for i, error in enumerate(errors[:10]):  # A-J最大10件
             choice_letter = chr(65 + i)  # A, B, C...
             
-            message = error.get('message', '不明なエラー')[:100]
+            message = error.get('message', '不明なエラー')[:150]
             file_path = error.get('file', '不明なファイル')
             line = error.get('line', '?')
             error_id = error.get('rand', error.get('id', ''))
@@ -302,21 +307,26 @@ async def handle_get_errors(project_id: Optional[str] = None) -> list[types.Text
             ai_summary = error.get('ai_summary', '')
             ai_suggestion = error.get('ai_suggestion', '')
             
-            error_list += f"**{choice_letter}. {file_path}:{line}**\n"
-            error_list += f"   メッセージ: {message}\n"
-            error_list += f"   ID: `{error_id}`\n"
+            error_text = f"**{choice_letter}. {file_path}:{line}**\n"
+            error_text += f"メッセージ: {message}\n"
+            error_text += f"ID: `{error_id}`\n"
             
             if ai_summary:
-                error_list += f"   🤖 AI概要: {ai_summary}\n"
+                error_text += f"🤖 AI概要: {ai_summary}\n"
             if ai_suggestion:
-                error_list += f"   💡 AI修正提案: {ai_suggestion}\n"
+                error_text += f"💡 AI修正提案: {ai_suggestion}\n"
             
-            error_list += "\n"
+            result_messages.append(types.TextContent(type="text", text=error_text))
         
-        if len(errors) > 26:
-            error_list += f"... 他 {len(errors) - 26} 件のエラーがあります。\n"
+        # 残りのエラー件数表示
+        if len(errors) > 10:
+            footer = f"... 他 {len(errors) - 10} 件のエラーがあります。\n\n**修正したいエラーをアルファベット（A〜J）で選択してください。**"
+            result_messages.append(types.TextContent(type="text", text=footer))
+        else:
+            footer = "**修正したいエラーをアルファベットで選択してください。**"
+            result_messages.append(types.TextContent(type="text", text=footer))
         
-        return [types.TextContent(type="text", text=error_list)]
+        return result_messages
         
     except Exception as e:
         return [types.TextContent(
