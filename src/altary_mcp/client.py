@@ -217,7 +217,8 @@ class AltaryClient:
                         <div class="container">
                             <h2>✅ 認証完了！</h2>
                             <p>Claude Codeで認証が完了しました。</p>
-                            <p><strong>このタブを手動で閉じてください</strong></p>
+                            <p>MCPの<code>altary_errors</code>コマンドでエラー取得が可能になりました。</p>
+                            <p><strong>このタブを手動で閉じてClaude Codeに戻ってください</strong></p>
                         </div>
                         <script>
                             // シンプルなページ表示のみ
