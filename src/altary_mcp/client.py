@@ -222,6 +222,39 @@ class AltaryClient:
                         <script>
                             let countdown = 3;
                             const countdownEl = document.getElementById('countdown');
+                            let windowClosed = false;
+                            
+                            // すぐにタブを閉じる試行
+                            function tryCloseWindow() {
+                                if (windowClosed) return;
+                                
+                                try {
+                                    // Chrome等のセキュリティ制限を回避する方法
+                                    
+                                    // 1. window.open()で開かれた場合
+                                    if (window.opener) {
+                                        window.opener.focus();
+                                        window.close();
+                                        windowClosed = true;
+                                        return;
+                                    }
+                                    
+                                    // 2. 通常のwindow.close()
+                                    window.close();
+                                    windowClosed = true;
+                                    
+                                    // 3. location.hrefでabout:blankに移動
+                                    setTimeout(() => {
+                                        if (!windowClosed) {
+                                            window.location.href = 'about:blank';
+                                            window.close();
+                                        }
+                                    }, 100);
+                                    
+                                } catch(e) {
+                                    console.log('Close attempt failed:', e);
+                                }
+                            }
                             
                             const timer = setInterval(() => {
                                 countdown--;
@@ -230,42 +263,44 @@ class AltaryClient:
                                 if (countdown <= 0) {
                                     clearInterval(timer);
                                     
-                                    // タブを閉じる（複数の方法を試行）
-                                    try {
-                                        // 1. 通常のwindow.close()
-                                        window.close();
-                                        
-                                        // 2. 親ウィンドウがある場合
-                                        if (window.opener) {
-                                            window.opener.focus();
-                                            window.close();
+                                    // タブクローズを試行
+                                    tryCloseWindow();
+                                    
+                                    // 閉じられない場合の最終手段
+                                    setTimeout(() => {
+                                        if (!windowClosed) {
+                                            document.body.innerHTML = \`
+                                                <div class="container">
+                                                    <h2>✅ 認証完了</h2>
+                                                    <p><strong>このタブを手動で閉じてください</strong></p>
+                                                    <p>Claude Codeに戻って作業を続けてください。</p>
+                                                    <button onclick="tryCloseAgain()" style="
+                                                        background: #667eea; color: white; border: none; 
+                                                        padding: 10px 20px; border-radius: 5px; cursor: pointer;
+                                                        font-size: 16px; margin-top: 10px;
+                                                    ">再度タブを閉じる</button>
+                                                </div>
+                                            \`;
+                                            
+                                            window.tryCloseAgain = function() {
+                                                tryCloseWindow();
+                                            };
                                         }
-                                        
-                                        // 3. フォーカスを失わせる
-                                        setTimeout(() => {
-                                            window.close();
-                                        }, 100);
-                                        
-                                    } catch(e) {
-                                        // 4. 閉じられない場合はメッセージ表示
-                                        document.body.innerHTML = `
-                                            <div class="container">
-                                                <h2>✅ 認証完了</h2>
-                                                <p>手動でこのタブを閉じてClaude Codeに戻ってください。</p>
-                                            </div>
-                                        `;
-                                    }
+                                    }, 1000);
                                 }
                             }, 1000);
                             
-                            // ページロード後すぐに閉じることも試行
-                            setTimeout(() => {
-                                try {
-                                    window.close();
-                                } catch(e) {
-                                    // 無視
+                            // 様々なタイミングでクローズを試行
+                            setTimeout(tryCloseWindow, 500);  // 0.5秒後
+                            setTimeout(tryCloseWindow, 1500); // 1.5秒後
+                            setTimeout(tryCloseWindow, 3000); // 3秒後
+                            
+                            // Visibility APIを使用してタブがアクティブでない時にクローズ
+                            document.addEventListener('visibilitychange', function() {
+                                if (document.visibilityState === 'hidden' && countdown <= 0) {
+                                    tryCloseWindow();
                                 }
-                            }, 2000);
+                            });
                         </script>
                         </body></html>
                         """,
@@ -321,7 +356,8 @@ class AltaryClient:
                 raise Exception(f"認証エラー: {auth_result['error']}")
             elif auth_result["token"]:
                 # 認証成功時、少し待ってからサーバーを停止（タブクローズを促進）
-                await asyncio.sleep(2)
+                await asyncio.sleep(3)  # 3秒待機（カウントダウンと同期）
+                print("🔐 認証完了、ローカルサーバーを停止します...")
                 return auth_result["token"]
             else:
                 raise Exception("認証がタイムアウトしました（5分）。再度お試しください。")
