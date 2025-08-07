@@ -218,7 +218,6 @@ class AltaryClient:
                             <h2>✅ 認証完了！</h2>
                             <p>Claude Codeで認証が完了しました。</p>
                             <p><strong>このタブを手動で閉じてください</strong></p>
-                            <p>Claude Codeターミナルに成功メッセージが表示されています。</p>
                         </div>
                         <script>
                             // シンプルなページ表示のみ
