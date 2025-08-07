@@ -45,37 +45,33 @@ pip install -e .
 
 ## セットアップ手順
 
-### 1. 初期認証
+### 🚀 簡単セットアップ（推奨）
 
 ```bash
-# ブラウザで認証ページを開く
-altary_auth
-
-# トークン取得後、設定
-altary_auth(token="your-auth-token")
-```
-
-### 2. プロジェクト選択
-
-```bash
-# プロジェクト一覧を取得
-altary_projects
-
-# デフォルトプロジェクトを設定
-altary_set_project(project_id="ALTR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
-```
-
-### 3. エラー管理
-
-```bash
-# エラー一覧を表示（A、B、C選択形式）
+# まずはこれだけ！自動で設定案内が始まります
 altary_errors
+```
 
-# 特定プロジェクトのエラー取得
-altary_errors(project_id="ALTR-specific-project-id")
+1. 初回実行時にブラウザが開くのでログイン
+2. 表示されたトークンで認証: `altary_auth(token="トークン")`
+3. 再度 `altary_errors` を実行してプロジェクト選択
+4. プロジェクト設定: `altary_set_project(project_id="プロジェクトID")`
+5. 再度 `altary_errors` でエラー一覧表示
 
-# エラー完了（類似エラーも自動完了）
-altary_complete(error_id="error-rand-id")
+### 詳細セットアップ（手動）
+
+```bash
+# 1. 認証設定
+altary_auth                    # ブラウザで認証
+altary_auth(token="your-token")  # トークン設定
+
+# 2. プロジェクト設定
+altary_projects               # プロジェクト一覧表示
+altary_set_project(project_id="ALTR-xxx")  # プロジェクト設定
+
+# 3. エラー管理
+altary_errors                 # エラー一覧表示
+altary_complete(error_id="error-id")  # エラー完了
 ```
 
 ## 利用可能なツール
@@ -95,6 +91,19 @@ altary_complete(error_id="error-rand-id")
 ### 基本的なワークフロー
 
 ```python
+# 🚀 シンプル！まずはこれだけ
+await altary_errors()  # 自動で設定案内→エラー表示
+
+# エラー修正後
+await altary_complete(error_id="target-error-id")
+
+# 設定確認したい場合
+await altary_config()
+```
+
+### 従来のワークフロー
+
+```python
 # 1. 設定確認
 await altary_config()
 
@@ -102,12 +111,11 @@ await altary_config()
 await altary_auth()
 
 # 3. プロジェクト設定（初回のみ）  
-projects = await altary_projects()
+await altary_projects()
 await altary_set_project(project_id="ALTR-...")
 
 # 4. エラー確認・修正
-errors = await altary_errors()
-# コード修正...
+await altary_errors()
 await altary_complete(error_id="target-error-id")
 ```
 

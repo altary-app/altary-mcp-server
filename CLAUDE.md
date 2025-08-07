@@ -29,6 +29,17 @@ python -m altary_mcp.server
 altary-mcp-server
 ```
 
+## Quick Start
+
+### For Users
+```bash
+# Start with just one command - automatic setup guidance
+altary_errors
+
+# Follow the prompts for authentication and project setup
+# Then use altary_complete(error_id="...") to mark errors as resolved
+```
+
 ## Architecture
 
 ### Core Components

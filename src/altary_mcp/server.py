@@ -198,11 +198,53 @@ async def handle_get_user_projects() -> list[types.TextContent]:
 
 async def handle_get_errors(project_id: Optional[str] = None) -> list[types.TextContent]:
     """エラー一覧取得の処理"""
+    # 1. 認証チェックと自動設定案内
     if not config.auth_token:
+        client.open_auth_page()
         return [types.TextContent(
             type="text",
-            text="❌ 認証トークンが設定されていません。先に `setup_auth` を実行してください。"
+            text="🔐 **認証が必要です**\n\n"
+                 "1. 開いたブラウザでログインを完了してください\n"
+                 "2. 表示されたトークンをコピー\n"
+                 "3. 以下のコマンドを実行:\n"
+                 "   `altary_auth(token=\"コピーしたトークン\")`\n"
+                 "4. その後、再度 `altary_errors` を実行してください\n\n"
+                 "**ログイン URL:** https://altary.web-ts.dev/users/claude-auth"
         )]
+    
+    # 2. プロジェクト設定チェックと自動設定案内
+    if not config.project_id:
+        try:
+            projects = await client.get_user_projects()
+            if not projects:
+                return [types.TextContent(
+                    type="text",
+                    text="❌ プロジェクトが見つかりませんでした。Altaryサービスでプロジェクトを作成してください。"
+                )]
+            
+            # プロジェクト一覧を整形
+            project_list = "📋 **デフォルトプロジェクトの設定が必要です**\n\n"
+            project_list += "利用可能なプロジェクト:\n\n"
+            
+            for i, project in enumerate(projects, 1):
+                project_name = project.get('name', '無名プロジェクト')
+                project_id_val = project.get('report_rand', project.get('id', ''))
+                project_list += f"{i}. **{project_name}**\n"
+                project_list += f"   ID: `{project_id_val}`\n\n"
+            
+            project_list += "**設定方法:**\n"
+            project_list += "以下のコマンドでデフォルトプロジェクトを設定してください:\n"
+            project_list += "`altary_set_project(project_id=\"上記のID\")`\n\n"
+            project_list += "設定完了後、再度 `altary_errors` を実行してください。"
+            
+            return [types.TextContent(type="text", text=project_list)]
+            
+        except Exception as e:
+            return [types.TextContent(
+                type="text",
+                text=f"❌ プロジェクト取得に失敗しました: {str(e)}\n\n"
+                     "認証トークンが無効な可能性があります。`altary_auth` で再認証してください。"
+            )]
     
     try:
         errors_data = await client.get_errors(project_id)
@@ -309,7 +351,7 @@ async def handle_setup_auth(token: Optional[str] = None) -> list[types.TextConte
                 config.auth_token = token
                 return [types.TextContent(
                     type="text",
-                    text="✅ 認証トークンが正常に設定されました。\n\n次に `set_default_project` でデフォルトプロジェクトを設定してください。"
+                    text="✅ 認証トークンが正常に設定されました。\n\n次に `altary_errors` を実行してプロジェクト設定を完了してください。"
                 )]
             else:
                 return [types.TextContent(
@@ -369,7 +411,7 @@ async def handle_set_default_project(project_id: str) -> list[types.TextContent]
         return [types.TextContent(
             type="text",
             text=f"✅ デフォルトプロジェクトを設定しました: `{project_id}`\n\n"
-                 "これで `get_errors` コマンドでエラー一覧を取得できます。"
+                 "🎉 設定完了！`altary_errors` でエラー一覧を取得できます。"
         )]
         
     except Exception as e:
@@ -397,20 +439,20 @@ async def handle_show_config() -> list[types.TextContent]:
     config_info += f"API ベースURL: `{config.api_base_url}`\n\n"
     
     if config.is_configured():
-        config_info += "✅ **設定完了** - 全ての機能を利用できます"
+        config_info += "✅ **設定完了** - `altary_errors` でエラー一覧を取得できます"
     else:
-        config_info += "⚠️ **設定不完全** - `setup_auth` と `set_default_project` を実行してください"
+        config_info += "⚠️ **設定不完全** - `altary_errors` を実行して設定を完了してください"
     
-    return [TextContent(type="text", text=config_info)]
+    return [types.TextContent(type="text", text=config_info)]
 
 
 async def handle_clear_config() -> list[types.TextContent]:
     """設定クリアの処理"""
     config.clear_config()
-    return [TextContent(
+    return [types.TextContent(
         type="text",
         text="🗑️ **設定をクリアしました**\n\n"
-             "再度利用する場合は `setup_auth` から設定を行ってください。"
+             "再度利用する場合は `altary_errors` から設定を開始してください。"
     )]
 
 
