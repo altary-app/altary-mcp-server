@@ -196,10 +196,77 @@ class AltaryClient:
                     auth_result["token"] = token
                     return web.Response(
                         text="""
-                        <html><body>
-                        <h2>✅ 認証完了！</h2>
-                        <p>認証が正常に完了しました。このタブを閉じてClaude Codeに戻ってください。</p>
-                        <script>window.close();</script>
+                        <html>
+                        <head>
+                            <title>認証完了</title>
+                            <style>
+                                body { 
+                                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                                    display: flex; align-items: center; justify-content: center;
+                                    min-height: 100vh; margin: 0; text-align: center;
+                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                }
+                                .container { 
+                                    background: white; padding: 2rem; border-radius: 12px;
+                                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+                                }
+                                .countdown { color: #667eea; font-weight: 600; }
+                            </style>
+                        </head>
+                        <body>
+                        <div class="container">
+                            <h2>✅ 認証完了！</h2>
+                            <p>Claude Codeで認証が完了しました。</p>
+                            <p class="countdown"><span id="countdown">3</span>秒後に自動的にこのタブを閉じます...</p>
+                        </div>
+                        <script>
+                            let countdown = 3;
+                            const countdownEl = document.getElementById('countdown');
+                            
+                            const timer = setInterval(() => {
+                                countdown--;
+                                countdownEl.textContent = countdown;
+                                
+                                if (countdown <= 0) {
+                                    clearInterval(timer);
+                                    
+                                    // タブを閉じる（複数の方法を試行）
+                                    try {
+                                        // 1. 通常のwindow.close()
+                                        window.close();
+                                        
+                                        // 2. 親ウィンドウがある場合
+                                        if (window.opener) {
+                                            window.opener.focus();
+                                            window.close();
+                                        }
+                                        
+                                        // 3. フォーカスを失わせる
+                                        setTimeout(() => {
+                                            window.close();
+                                        }, 100);
+                                        
+                                    } catch(e) {
+                                        // 4. 閉じられない場合はメッセージ表示
+                                        document.body.innerHTML = `
+                                            <div class="container">
+                                                <h2>✅ 認証完了</h2>
+                                                <p>手動でこのタブを閉じてClaude Codeに戻ってください。</p>
+                                            </div>
+                                        `;
+                                    }
+                                }
+                            }, 1000);
+                            
+                            // ページロード後すぐに閉じることも試行
+                            setTimeout(() => {
+                                try {
+                                    window.close();
+                                } catch(e) {
+                                    // 無視
+                                }
+                            }, 2000);
+                        </script>
                         </body></html>
                         """,
                         content_type='text/html'
@@ -253,6 +320,8 @@ class AltaryClient:
             if auth_result["error"]:
                 raise Exception(f"認証エラー: {auth_result['error']}")
             elif auth_result["token"]:
+                # 認証成功時、少し待ってからサーバーを停止（タブクローズを促進）
+                await asyncio.sleep(2)
                 return auth_result["token"]
             else:
                 raise Exception("認証がタイムアウトしました（5分）。再度お試しください。")
