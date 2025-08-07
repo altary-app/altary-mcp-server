@@ -7,15 +7,9 @@ import json
 import sys
 from typing import Dict, List, Any, Optional
 
-from mcp.server.stdio import stdio_server
-from mcp.types import (
-    Tool, 
-    TextContent, 
-    Resource, 
-    Prompt,
-    PromptMessage,
-    Role
-)
+import mcp.server.stdio
+import mcp.types as types
+from mcp.server import NotificationOptions, Server
 
 from .config import AltaryConfig
 from .client import AltaryClient
@@ -25,14 +19,17 @@ from .client import AltaryClient
 config = AltaryConfig()
 client = AltaryClient(config)
 
+# Create the server instance
+server = Server("altary-mcp")
 
-@stdio_server.list_tools()
-async def list_tools() -> List[Tool]:
+
+@server.list_tools()
+async def list_tools() -> list[types.Tool]:
     """
     利用可能なツール一覧を返す
     """
     return [
-        Tool(
+        types.Tool(
             name="get_user_projects",
             description="ユーザーのプロジェクト一覧を取得します",
             inputSchema={
@@ -41,7 +38,7 @@ async def list_tools() -> List[Tool]:
                 "required": []
             }
         ),
-        Tool(
+        types.Tool(
             name="get_errors",
             description="指定されたプロジェクトのエラー一覧を取得します",
             inputSchema={
@@ -55,7 +52,7 @@ async def list_tools() -> List[Tool]:
                 "required": []
             }
         ),
-        Tool(
+        types.Tool(
             name="complete_error",
             description="エラーを完了状態にします（AI類似性検出で関連エラーも自動完了）",
             inputSchema={
@@ -69,7 +66,7 @@ async def list_tools() -> List[Tool]:
                 "required": ["error_id"]
             }
         ),
-        Tool(
+        types.Tool(
             name="setup_auth",
             description="Altary認証の初期設定を行います",
             inputSchema={
@@ -83,7 +80,7 @@ async def list_tools() -> List[Tool]:
                 "required": []
             }
         ),
-        Tool(
+        types.Tool(
             name="set_default_project", 
             description="デフォルトプロジェクトを設定します",
             inputSchema={
@@ -97,7 +94,7 @@ async def list_tools() -> List[Tool]:
                 "required": ["project_id"]
             }
         ),
-        Tool(
+        types.Tool(
             name="show_config",
             description="現在の設定を表示します",
             inputSchema={
@@ -106,7 +103,7 @@ async def list_tools() -> List[Tool]:
                 "required": []
             }
         ),
-        Tool(
+        types.Tool(
             name="clear_config",
             description="設定をクリアします", 
             inputSchema={
@@ -118,8 +115,8 @@ async def list_tools() -> List[Tool]:
     ]
 
 
-@stdio_server.call_tool()
-async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
+@server.call_tool()
+async def call_tool(name: str, arguments: Dict[str, Any]) -> list[types.TextContent]:
     """
     ツール実行のメインハンドラー
     """
@@ -150,22 +147,22 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             return await handle_clear_config()
         
         else:
-            return [TextContent(
+            return [types.TextContent(
                 type="text",
                 text=f"❌ 未知のツール: {name}"
             )]
     
     except Exception as e:
-        return [TextContent(
+        return [types.TextContent(
             type="text", 
             text=f"❌ エラーが発生しました: {str(e)}"
         )]
 
 
-async def handle_get_user_projects() -> List[TextContent]:
+async def handle_get_user_projects() -> list[types.TextContent]:
     """プロジェクト一覧取得の処理"""
     if not config.auth_token:
-        return [TextContent(
+        return [types.TextContent(
             type="text",
             text="❌ 認証トークンが設定されていません。先に `setup_auth` を実行してください。"
         )]
@@ -174,7 +171,7 @@ async def handle_get_user_projects() -> List[TextContent]:
         projects = await client.get_user_projects()
         
         if not projects:
-            return [TextContent(
+            return [types.TextContent(
                 type="text",
                 text="📝 プロジェクトが見つかりませんでした。"
             )]
@@ -190,19 +187,19 @@ async def handle_get_user_projects() -> List[TextContent]:
             project_list += f"{i}. **{project_name}**{default_mark}\n"
             project_list += f"   ID: `{project_id}`\n\n"
         
-        return [TextContent(type="text", text=project_list)]
+        return [types.TextContent(type="text", text=project_list)]
         
     except Exception as e:
-        return [TextContent(
+        return [types.TextContent(
             type="text",
             text=f"❌ プロジェクト取得に失敗しました: {str(e)}"
         )]
 
 
-async def handle_get_errors(project_id: Optional[str] = None) -> List[TextContent]:
+async def handle_get_errors(project_id: Optional[str] = None) -> list[types.TextContent]:
     """エラー一覧取得の処理"""
     if not config.auth_token:
-        return [TextContent(
+        return [types.TextContent(
             type="text",
             text="❌ 認証トークンが設定されていません。先に `setup_auth` を実行してください。"
         )]
@@ -211,14 +208,14 @@ async def handle_get_errors(project_id: Optional[str] = None) -> List[TextConten
         errors_data = await client.get_errors(project_id)
         
         if errors_data.get('status') != 'success':
-            return [TextContent(
+            return [types.TextContent(
                 type="text",
                 text=f"❌ エラー取得に失敗しました: {errors_data.get('message', '不明なエラー')}"
             )]
         
         errors = errors_data.get('errors', [])
         if not errors:
-            return [TextContent(
+            return [types.TextContent(
                 type="text",
                 text="✅ 現在エラーはありません。"
             )]
@@ -252,19 +249,19 @@ async def handle_get_errors(project_id: Optional[str] = None) -> List[TextConten
         if len(errors) > 26:
             error_list += f"... 他 {len(errors) - 26} 件のエラーがあります。\n"
         
-        return [TextContent(type="text", text=error_list)]
+        return [types.TextContent(type="text", text=error_list)]
         
     except Exception as e:
-        return [TextContent(
+        return [types.TextContent(
             type="text",
             text=f"❌ エラー取得に失敗しました: {str(e)}"
         )]
 
 
-async def handle_complete_error(error_id: str) -> List[TextContent]:
+async def handle_complete_error(error_id: str) -> list[types.TextContent]:
     """エラー完了処理"""
     if not config.auth_token:
-        return [TextContent(
+        return [types.TextContent(
             type="text",
             text="❌ 認証トークンが設定されていません。先に `setup_auth` を実行してください。"
         )]
@@ -273,7 +270,7 @@ async def handle_complete_error(error_id: str) -> List[TextContent]:
         result = await client.complete_error(error_id)
         
         if result.get('status') != 'success':
-            return [TextContent(
+            return [types.TextContent(
                 type="text",
                 text=f"❌ エラー完了処理に失敗しました: {result.get('message', '不明なエラー')}"
             )]
@@ -293,16 +290,16 @@ async def handle_complete_error(error_id: str) -> List[TextContent]:
                 error_msg = completed.get('message', '不明')[:50]
                 response += f"{i}. 類似度{similarity:.2f}: {error_msg}...\n"
         
-        return [TextContent(type="text", text=response)]
+        return [types.TextContent(type="text", text=response)]
         
     except Exception as e:
-        return [TextContent(
+        return [types.TextContent(
             type="text",
             text=f"❌ エラー完了処理に失敗しました: {str(e)}"
         )]
 
 
-async def handle_setup_auth(token: Optional[str] = None) -> List[TextContent]:
+async def handle_setup_auth(token: Optional[str] = None) -> list[types.TextContent]:
     """認証設定の処理"""
     if token:
         # トークンが提供された場合、検証して保存
@@ -310,24 +307,24 @@ async def handle_setup_auth(token: Optional[str] = None) -> List[TextContent]:
             is_valid = await client.validate_token(token)
             if is_valid:
                 config.auth_token = token
-                return [TextContent(
+                return [types.TextContent(
                     type="text",
                     text="✅ 認証トークンが正常に設定されました。\n\n次に `set_default_project` でデフォルトプロジェクトを設定してください。"
                 )]
             else:
-                return [TextContent(
+                return [types.TextContent(
                     type="text",
                     text="❌ 無効なトークンです。正しいトークンを確認してください。"
                 )]
         except Exception as e:
-            return [TextContent(
+            return [types.TextContent(
                 type="text",
                 text=f"❌ トークン検証中にエラーが発生しました: {str(e)}"
             )]
     else:
         # ブラウザで認証ページを開く
         client.open_auth_page()
-        return [TextContent(
+        return [types.TextContent(
             type="text",
             text="🌐 **認証ページを開きました**\n\n"
                  "1. ブラウザでログインを完了してください\n"
@@ -338,17 +335,17 @@ async def handle_setup_auth(token: Optional[str] = None) -> List[TextContent]:
         )]
 
 
-async def handle_set_default_project(project_id: str) -> List[TextContent]:
+async def handle_set_default_project(project_id: str) -> list[types.TextContent]:
     """デフォルトプロジェクト設定の処理"""
     if not config.auth_token:
-        return [TextContent(
+        return [types.TextContent(
             type="text",
             text="❌ 認証トークンが設定されていません。先に `setup_auth` を実行してください。"
         )]
     
     # プロジェクトIDの形式検証
     if not project_id.startswith("ALTR-"):
-        return [TextContent(
+        return [types.TextContent(
             type="text",
             text="❌ 無効なプロジェクトID形式です。'ALTR-'で始まるIDを指定してください。"
         )]
@@ -362,27 +359,27 @@ async def handle_set_default_project(project_id: str) -> List[TextContent]:
         )
         
         if not project_exists:
-            return [TextContent(
+            return [types.TextContent(
                 type="text",
                 text=f"❌ 指定されたプロジェクトが見つかりません: {project_id}\n\n"
                      "`get_user_projects` でプロジェクト一覧を確認してください。"
             )]
         
         config.project_id = project_id
-        return [TextContent(
+        return [types.TextContent(
             type="text",
             text=f"✅ デフォルトプロジェクトを設定しました: `{project_id}`\n\n"
                  "これで `get_errors` コマンドでエラー一覧を取得できます。"
         )]
         
     except Exception as e:
-        return [TextContent(
+        return [types.TextContent(
             type="text",
             text=f"❌ プロジェクト設定に失敗しました: {str(e)}"
         )]
 
 
-async def handle_show_config() -> List[TextContent]:
+async def handle_show_config() -> list[types.TextContent]:
     """設定表示の処理"""
     config_info = "⚙️ **現在の設定**\n\n"
     
@@ -407,7 +404,7 @@ async def handle_show_config() -> List[TextContent]:
     return [TextContent(type="text", text=config_info)]
 
 
-async def handle_clear_config() -> List[TextContent]:
+async def handle_clear_config() -> list[types.TextContent]:
     """設定クリアの処理"""
     config.clear_config()
     return [TextContent(
@@ -424,7 +421,15 @@ def main():
     
     try:
         # サーバーを実行
-        asyncio.run(stdio_server.run())
+        async def run_server():
+            async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
+                await server.run(
+                    read_stream,
+                    write_stream,
+                    server.create_initialization_options()
+                )
+        
+        asyncio.run(run_server())
     except KeyboardInterrupt:
         print("\n🛑 サーバーを停止しています...")
     finally:
