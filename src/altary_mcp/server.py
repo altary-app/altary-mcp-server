@@ -198,19 +198,38 @@ async def handle_get_user_projects() -> list[types.TextContent]:
 
 async def handle_get_errors(project_id: Optional[str] = None) -> list[types.TextContent]:
     """エラー一覧取得の処理"""
-    # 1. 認証チェックと自動設定案内
+    # 1. 認証チェックと自動認証実行
     if not config.auth_token:
-        client.open_auth_page()
-        return [types.TextContent(
-            type="text",
-            text="🔐 **認証が必要です**\n\n"
-                 "1. 開いたブラウザでログインを完了してください\n"
-                 "2. 表示されたトークンをコピー\n"
-                 "3. 以下のコマンドを実行:\n"
-                 "   `altary_auth(token=\"コピーしたトークン\")`\n"
-                 "4. その後、再度 `altary_errors` を実行してください\n\n"
-                 "**ログイン URL:** https://altary.web-ts.dev/users/claude-auth"
-        )]
+        try:
+            # 自動認証を試行
+            auto_token = await client.start_callback_auth()
+            
+            # 取得したトークンを検証
+            is_valid = await client.validate_token(auto_token)
+            if is_valid:
+                config.auth_token = auto_token
+                # 認証成功後、プロジェクト設定チェックに進む
+                pass
+            else:
+                return [types.TextContent(
+                    type="text",
+                    text="❌ 自動取得したトークンが無効です。`altary_auth` で再認証してください。"
+                )]
+                
+        except Exception as e:
+            # 自動認証失敗時は手動認証案内
+            client.open_auth_page()
+            return [types.TextContent(
+                type="text",
+                text=f"⚠️ **自動認証に失敗しました**\n\n"
+                     f"エラー: {str(e)}\n\n"
+                     f"🔄 **手動認証モードに切り替えました**\n"
+                     f"1. 開いたブラウザでログインを完了してください\n"
+                     f"2. 表示されたトークンをコピー\n"
+                     f"3. `altary_auth(token=\"コピーしたトークン\")` を実行\n"
+                     f"4. その後、再度 `altary_errors` を実行してください\n\n"
+                     f"**ログイン URL:** https://altary.web-ts.dev/users/claude-auth"
+            )]
     
     # 2. プロジェクト設定チェックと自動設定案内
     if not config.project_id:
@@ -370,17 +389,39 @@ async def handle_setup_auth(token: Optional[str] = None) -> list[types.TextConte
                 text=f"❌ トークン検証中にエラーが発生しました: {str(e)}"
             )]
     else:
-        # ブラウザで認証ページを開く
-        client.open_auth_page()
-        return [types.TextContent(
-            type="text",
-            text="🌐 **認証ページを開きました**\n\n"
-                 "1. ブラウザでログインを完了してください\n"
-                 "2. 表示されたトークンをコピー\n"
-                 "3. `setup_auth` をトークン付きで再実行: \n"
-                 "   例: `setup_auth` with token parameter\n\n"
-                 "**ログイン URL:** https://altary.web-ts.dev/users/claude-auth"
-        )]
+        # 自動コールバック認証を実行
+        try:
+            auto_token = await client.start_callback_auth()
+            
+            # 取得したトークンを検証
+            is_valid = await client.validate_token(auto_token)
+            if is_valid:
+                config.auth_token = auto_token
+                return [types.TextContent(
+                    type="text",
+                    text="🎉 **自動認証が完了しました！**\n\n"
+                         "✅ 認証トークンが正常に設定されました。\n"
+                         "次に `altary_errors` を実行してプロジェクト設定を完了してください。"
+                )]
+            else:
+                return [types.TextContent(
+                    type="text",
+                    text="❌ 自動取得したトークンが無効です。手動で再認証してください。"
+                )]
+                
+        except Exception as e:
+            # 自動認証が失敗した場合は従来方式にフォールバック
+            client.open_auth_page()
+            return [types.TextContent(
+                type="text",
+                text=f"⚠️ **自動認証に失敗しました**\n\n"
+                     f"エラー: {str(e)}\n\n"
+                     f"🔄 **手動認証モードに切り替えました**\n"
+                     f"1. 開いたブラウザでログインを完了してください\n"
+                     f"2. 表示されたトークンをコピー\n"
+                     f"3. `altary_auth(token=\"コピーしたトークン\")` を実行\n\n"
+                     f"**ログイン URL:** https://altary.web-ts.dev/users/claude-auth"
+            )]
 
 
 async def handle_set_default_project(project_id: str) -> list[types.TextContent]:

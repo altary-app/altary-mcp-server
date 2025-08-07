@@ -2,8 +2,12 @@
 Altary API client for MCP Server
 """
 
+import asyncio
 import httpx
 import webbrowser
+import socket
+from urllib.parse import urlparse, parse_qs
+from aiohttp import web, web_request
 from typing import Dict, List, Any, Optional
 from .config import AltaryConfig
 
@@ -134,7 +138,7 @@ class AltaryClient:
     
     def open_auth_page(self) -> None:
         """
-        認証ページをブラウザで開く
+        認証ページをブラウザで開く（旧方式）
         """
         auth_url = f"{self.config.api_base_url}/users/claude-auth"
         try:
@@ -144,6 +148,118 @@ class AltaryClient:
         except Exception as e:
             print(f"ブラウザを開けませんでした: {e}")
             print(f"手動で以下のURLにアクセスしてください: {auth_url}")
+    
+    def find_free_port(self) -> int:
+        """
+        使用可能なポート番号を見つける
+        """
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('', 0))
+            s.listen(1)
+            port = s.getsockname()[1]
+        return port
+    
+    async def start_callback_auth(self) -> str:
+        """
+        コールバック方式で認証を実行
+        
+        Returns:
+            str: 取得したトークン
+        """
+        # 使用可能なポートを見つける
+        callback_port = self.find_free_port()
+        callback_url = f"http://localhost:{callback_port}/callback"
+        
+        # 認証結果を格納する変数
+        auth_result = {"token": None, "error": None}
+        
+        async def handle_callback(request: web_request.Request):
+            """コールバック処理"""
+            try:
+                # URLパラメータからトークンを取得
+                token = request.query.get('token')
+                error = request.query.get('error')
+                
+                if error:
+                    auth_result["error"] = error
+                    return web.Response(
+                        text="""
+                        <html><body>
+                        <h2>❌ 認証エラー</h2>
+                        <p>認証に失敗しました。Claude Codeに戻って再試行してください。</p>
+                        <script>window.close();</script>
+                        </body></html>
+                        """,
+                        content_type='text/html'
+                    )
+                elif token:
+                    auth_result["token"] = token
+                    return web.Response(
+                        text="""
+                        <html><body>
+                        <h2>✅ 認証完了！</h2>
+                        <p>認証が正常に完了しました。このタブを閉じてClaude Codeに戻ってください。</p>
+                        <script>window.close();</script>
+                        </body></html>
+                        """,
+                        content_type='text/html'
+                    )
+                else:
+                    auth_result["error"] = "トークンが見つかりません"
+                    return web.Response(
+                        text="""
+                        <html><body>
+                        <h2>❌ エラー</h2>
+                        <p>認証データが不正です。Claude Codeに戻って再試行してください。</p>
+                        <script>window.close();</script>
+                        </body></html>
+                        """,
+                        content_type='text/html'
+                    )
+            except Exception as e:
+                auth_result["error"] = f"コールバック処理エラー: {str(e)}"
+                return web.Response(text="エラーが発生しました", status=500)
+        
+        # Webサーバーを設定
+        app = web.Application()
+        app.router.add_get('/callback', handle_callback)
+        
+        # サーバーを起動
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, 'localhost', callback_port)
+        await site.start()
+        
+        try:
+            # コールバック付きの認証URLを生成
+            auth_url = f"{self.config.api_base_url}/users/claude-auth?callback={callback_url}"
+            
+            # ブラウザで認証ページを開く
+            print(f"🌐 自動認証を開始します...")
+            print(f"ブラウザで認証を完了してください。認証後は自動的にトークンが設定されます。")
+            
+            try:
+                webbrowser.open(auth_url)
+            except Exception as e:
+                print(f"ブラウザを自動で開けませんでした: {e}")
+                print(f"手動で以下のURLにアクセスしてください: {auth_url}")
+            
+            # 認証完了まで待機（最大5分）
+            for _ in range(300):  # 5分間待機
+                if auth_result["token"] or auth_result["error"]:
+                    break
+                await asyncio.sleep(1)
+            
+            if auth_result["error"]:
+                raise Exception(f"認証エラー: {auth_result['error']}")
+            elif auth_result["token"]:
+                return auth_result["token"]
+            else:
+                raise Exception("認証がタイムアウトしました（5分）。再度お試しください。")
+                
+        finally:
+            # サーバーを停止
+            await runner.cleanup()
     
     async def validate_token(self, token: str) -> bool:
         """

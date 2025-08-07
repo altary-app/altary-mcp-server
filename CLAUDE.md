@@ -33,10 +33,11 @@ altary-mcp-server
 
 ### For Users
 ```bash
-# Start with just one command - automatic setup guidance
+# 🚀 One command setup - fully automated!
 altary_errors
 
-# Follow the prompts for authentication and project setup
+# Automatic browser authentication (no token copy/paste needed!)
+# Automatic project selection guidance
 # Then use altary_complete(error_id="...") to mark errors as resolved
 ```
 
