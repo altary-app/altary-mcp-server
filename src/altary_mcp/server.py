@@ -35,7 +35,10 @@ async def check_login_status_on_startup():
             is_valid = await client.validate_token(auto_token)
             if is_valid:
                 config.auth_token = auto_token
-                print("✅ 自動認証が完了しました！")
+                print("\n" + "="*50)
+                print("🎉 ** Altary自動認証に成功しました！** 🎉") 
+                print("✅ MCPサーバーが正常に認証されました")
+                print("="*50 + "\n")
                 
                 # プロジェクトが未設定の場合はプロジェクト選択案内
                 if not config.project_id:
